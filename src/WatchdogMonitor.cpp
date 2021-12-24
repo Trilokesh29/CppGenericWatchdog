@@ -4,9 +4,9 @@
 #include <iostream>
 
 #define LOG_INFO(X)                                                            \
-  std::cout << __PRETTY_FUNCTION__ << "::" << __LINE__ << " " << X << std::endl;
+  std::cout << __FUNCTION__ << ":: " << X << std::endl;
 #define LOG_ERROR(X)                                                           \
-  std::cerr << __PRETTY_FUNCTION__ << "::" << __LINE__ << " " << X << std::endl;
+  std::cerr << __FUNCTION__ << ":: " << X << std::endl;
 
 namespace {
 std::size_t GenerateIdentity(const std::string &aIdentifier) {
@@ -36,29 +36,29 @@ CWatchdogMonitor::CWatchdogMonitor(IWatchdogMonitor::Config aConfig) noexcept
 }
 
 CWatchdogMonitor::~CWatchdogMonitor() {
-  std::unique_lock<std::mutex> lock(mWatchdogMtx);
-  mKeepMonitoring = false;
-  mMonitorCv.notify_one();
+
+  {
+    std::unique_lock<std::mutex> lock(mWatchdogMtx);
+    mKeepMonitoring = false;
+    mMonitorCv.notify_one();
+  }
+
   mMonitorThread.join();
 }
 
 void CWatchdogMonitor::StartMonitoring() noexcept {
 
-  LOG_INFO("Monitor thread started");
+  LOG_INFO("Monitor thread started for: " << mConfig.identifier);
 
   while (mKeepMonitoring) {
 
     std::unique_lock<std::mutex> lock(mWatchdogMtx);
 
     const auto status =
-        mMonitorCv.wait_for(lock, mConfig.checkupTimeInSec * 1s);
+        mMonitorCv.wait_for(lock, mConfig.checkupTimeInSec * 1s, [this](){return !mKeepMonitoring;});
 
-    if (status == std::cv_status::timeout) {
+    if (status) {
       CheckHealthAndUpdateState();
-
-    } else if (!mKeepMonitoring.load()) {
-      LOG_INFO("Received signal to stop monitoring, exiting");
-      break;
     }
   }
 }
@@ -69,7 +69,7 @@ void CWatchdogMonitor::CheckHealthAndUpdateState() noexcept {
        ++it) {
     if (it->second.second == mConfig.missCountThreshold) {
       // Ideally the monitor, should restart.
-      LOG_ERROR("Entity " << it->first << " has reached the missing threshold");
+      LOG_ERROR("for identifier: " << mConfig.identifier << "Entity " << it->first << " has reached the missing threshold");
       mConfig.missedKickCb(it->first);
       it->second = {false, 0};
     } else {
@@ -86,8 +86,12 @@ CWatchdogMonitor::RegisterEntity(std::string aIdentifier) noexcept {
   const auto status = mRegisteredEntity.insert(GenerateIdentity(aIdentifier));
 
   if (!status.second) {
-    LOG_ERROR("Trying to register duplicate entity");
+    LOG_ERROR("Trying to register duplicate entity: " << aIdentifier << " is already registered");
     identity = std::numeric_limits<Identity_t>::max();
+  }
+  else
+  {
+    mEntitiesKickStatus.insert({identity, {false, 0}});
   }
 
   return identity;
@@ -104,7 +108,7 @@ CWatchdogMonitor::UnregisterEntity(Identity_t aIdentity) noexcept {
     const auto isRemoved = mEntitiesKickStatus.erase(aIdentity) > 0;
     assert(isRemoved);
   } else {
-    LOG_ERROR("Trying to remove unregistered entity");
+    LOG_ERROR("Trying to remove unregistered entity: " << aIdentity << " is not registered");
   }
 
   return status;
