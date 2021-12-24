@@ -67,14 +67,14 @@ void CWatchdogMonitor::CheckHealthAndUpdateState() noexcept {
 
   for (auto it = mEntitiesKickStatus.begin(); it != mEntitiesKickStatus.end();
        ++it) {
-      if (it->second.second == mConfig.missCountThreshold) {
-        // Ideally the monitor, should restart.
-        LOG_ERROR("Entity " << it->first << " has reached the missing threshold");
-        mConfig.missedKickCb(it->first);
-        it->second = {false, 0};
-      } else {
-        it->second.second += 1;
-      }
+    if (it->second.second == mConfig.missCountThreshold) {
+      // Ideally the monitor, should restart.
+      LOG_ERROR("Entity " << it->first << " has reached the missing threshold");
+      mConfig.missedKickCb(it->first);
+      it->second = {false, 0};
+    } else {
+      it->second.second += 1;
+    }
   }
 }
 
@@ -86,6 +86,7 @@ CWatchdogMonitor::RegisterEntity(std::string aIdentifier) noexcept {
   const auto status = mRegisteredEntity.insert(GenerateIdentity(aIdentifier));
 
   if (!status.second) {
+    LOG_ERROR("Trying to register duplicate entity");
     identity = std::numeric_limits<Identity_t>::max();
   }
 
@@ -98,13 +99,15 @@ CWatchdogMonitor::UnregisterEntity(Identity_t aIdentity) noexcept {
   bool status = false;
 
   std::unique_lock<std::mutex> lock(mWatchdogMtx);
-
   if (mRegisteredEntity.erase(aIdentity) > 0) {
     status = true;
+    const auto isRemoved = mEntitiesKickStatus.erase(aIdentity) > 0;
+    assert(isRemoved);
+  } else {
+    LOG_ERROR("Trying to remove unregistered entity");
   }
-  const auto isRemoved = mEntitiesKickStatus.erase(aIdentity) > 0;
-  assert(isRemoved);
-  return true;
+
+  return status;
 }
 
 void CWatchdogMonitor::kick(Identity_t aIdentity) noexcept {
