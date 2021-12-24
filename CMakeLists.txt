@@ -14,7 +14,7 @@ set(CMAKE_BUILD_TYPE Debug)
 add_executable(${PROJECT_NAME}
   src/WatchdogMonitor.cpp
   src/WatchdogMonitor.h
-  interface/IwatchdogMonitor.h
+  interface/IWatchdogMonitor.h
   test/main.cpp
   test/WatchdogTest.cpp
   test/WatchdogTest.h

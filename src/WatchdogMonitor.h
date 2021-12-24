@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IwatchdogMonitor.h"
+#include "IWatchdogMonitor.h"
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
