@@ -13,11 +13,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: configure
+    - name: configure-gtest
       run:  sudo apt-get install libgtest-dev && cd /usr/src/gtest && sudo cmake CMakeLists.txt && sudo make && sudo cp lib/*.a /usr/lib
-    - name: setup
+    - name: configure
       run:  mkdir build && cd build && cmake ../
-    - name: make
+    - name: build
       run:  cd build && make
     - name: test
       run: cd build/bin/ && ./WatchdogTest
