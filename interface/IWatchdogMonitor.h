@@ -21,7 +21,7 @@ public:
     const std::string identifier;
     // frequency to check the heartbeart kick.
     const std::uint32_t checkupTimeInSec{0};
-    // heart miss count threshold. after this amount of heartbeat miss, the thread under question is said to be in a bad state.
+    // heart beat miss count threshold. after this amount of heartbeat misses, the thread under question is said to be in a bad state.
     const std::uint32_t missCountThreshold{0};
     // To notify the registerer about the thread which is in a bad state. 
     MissedKickIdentityCB missedKickCb;
