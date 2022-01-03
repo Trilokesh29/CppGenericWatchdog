@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 std::unique_ptr<IWatchdogMonitor>
 CreateWatchdog(IWatchdogMonitor::Config aConfig) noexcept {
 
-  if (aConfig.checkupTimeInSec < 0) {
+  if (aConfig.checkupTimeInSec == 0) {
     return std::unique_ptr<CWatchdogMonitor>();
   }
 
